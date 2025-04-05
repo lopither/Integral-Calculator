@@ -1,0 +1,120 @@
+import os
+import re
+import numpy as np
+import torch
+from torchquad import GaussLegendre
+from scipy.integrate import quad
+import sympy as sp
+import tkinter as tk
+from tkinter import messagebox
+from IPython.display import display
+from sympy import init_printing
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+init_printing(use_unicode=True)
+
+def monte_carlo_integrate(f, a, b, n):
+    samples = np.random.uniform(a, b, size=n)
+    return np.mean(f(samples)) * (b - a)
+
+def scipy_quad_infinite_bounds(func):
+    return quad(func, -np.inf, np.inf)[0]
+
+def parse_bounds(bounds_input):
+    safe_dict = {
+        "np": np, "pi": np.pi, "e": np.e, "log": np.log, "exp": np.exp, "sqrt": np.sqrt,
+        "sin": np.sin, "cos": np.cos, "tan": np.tan, "inf": np.inf
+    }
+    bounds = bounds_input.split(',')
+    evaluated_bounds = []
+    for b in bounds:
+        try:
+            evaluated_bound = eval(b.strip(), {"__builtins__": None}, safe_dict)
+        except Exception as err:
+            raise ValueError(f"Error evaluating bound '{b}': {err}")
+        evaluated_bounds.append(float(evaluated_bound))
+    return evaluated_bounds
+
+def parse_function(func_str):
+    replacements = {
+        'log': 'np.log', 'exp': 'np.exp', 'sqrt': 'np.sqrt', 'sin': 'np.sin', 'cos': 'np.cos',
+        'tan': 'np.tan', 'arcsin': 'np.arcsin', 'arccos': 'np.arccos', 'arctan': 'np.arctan',
+        'abs': 'np.abs', 'ln': 'np.log'
+    }
+    for name, np_name in replacements.items():
+        func_str = re.sub(r'\b' + name + r'\s*\(', np_name + '(', func_str)
+    return eval("lambda x: " + func_str, {"np": np})
+
+def parse_function_sympy(func_str):
+    x = sp.Symbol('x')
+    try:
+        f_sym = sp.sympify(func_str)
+        return f_sym
+    except Exception as e:
+        raise ValueError(f"Sympy error: {e}")
+
+def update_bounds_visibility(*args):
+    if method_var.get() == "Symbolic":
+        bounds_label.pack_forget()
+        entry_bounds.pack_forget()
+    else:
+        bounds_label.pack()
+        entry_bounds.pack()
+
+def integrate_function():
+    try:
+        function_input = entry_function.get()
+        method = method_var.get()
+
+        if method == "Symbolic":
+            x = sp.Symbol('x')
+            f_sym = parse_function_sympy(function_input)
+            result = sp.integrate(f_sym, x)
+            pretty_result = sp.pretty(result, use_unicode=True)
+            result_label.config(text=f"Symbolic Indefinite Integral:\n{pretty_result}")
+            return
+
+        bounds_input = entry_bounds.get()
+        bounds = parse_bounds(bounds_input)
+        f_numeric = parse_function(function_input)
+
+        if method == "Scipy":
+            result, _ = quad(f_numeric, bounds[0], bounds[1]) if bounds != [-np.inf, np.inf] else (scipy_quad_infinite_bounds(f_numeric), 0)
+
+        elif method == "Gauss-Legendre":
+            gl = GaussLegendre()
+            result = gl.integrate(f_numeric, dim=1, N=100, integration_domain=[bounds]) if bounds != [-np.inf, np.inf] else scipy_quad_infinite_bounds(f_numeric)
+
+        elif method == "Monte Carlo":
+            result = monte_carlo_integrate(f_numeric, bounds[0], bounds[1], 10000) if bounds != [-np.inf, np.inf] else scipy_quad_infinite_bounds(f_numeric)
+
+        result_label.config(text=f"Result: {result:.6f}")
+
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
+root = tk.Tk()
+root.title("Definite & Indefinite Integral Calculator")
+
+tk.Label(root, text="Enter function (in terms of x):").pack()
+entry_function = tk.Entry(root)
+entry_function.pack()
+
+bounds_label = tk.Label(root, text="Enter bounds (e.g., 0, pi or -inf, inf):")
+bounds_label.pack()
+entry_bounds = tk.Entry(root)
+entry_bounds.insert(0, "0, pi")
+entry_bounds.pack()
+
+tk.Label(root, text="Select method:").pack()
+method_var = tk.StringVar(value="Gauss-Legendre")
+method_menu = tk.OptionMenu(root, method_var, "Gauss-Legendre", "Monte Carlo", "Scipy", "Symbolic")
+method_menu.pack()
+
+method_var.trace('w', update_bounds_visibility)
+
+tk.Button(root, text="Calculate", command=integrate_function).pack()
+result_label = tk.Label(root, text="Result:", font=("Courier", 12))
+result_label.pack()
+
+root.mainloop()
