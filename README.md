@@ -7,6 +7,7 @@ This is a Python-based GUI application for calculating both definite and indefin
 - Scipy's `quad` method (Use for `-inf, inf` bounds of the integral)
 - SymPy's Symbolic Integration
 
+Has very precise Gauss-Legendre algorithms that is capable of handling complex definate integral problems.
 ---
 
 ## Features
