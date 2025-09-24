@@ -35,5 +35,5 @@ This is a Python-based GUI application for calculating both definite and indefin
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/integral-calculator.git
+git clone https://github.com/lopither/integral-calculator.git
 cd integral-calculator
