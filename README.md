@@ -19,6 +19,18 @@ This is a Python-based GUI application for calculating both definite and indefin
 - Safe parsing of mathematical functions.
 ---
 
+## Extra Functions
+
+- Gamma function
+-  Digamma (psi) function
+-  Polygamma function
+-  Beta function
+-  Zeta function
+-  Erf (error) function
+-  Jv (bessel) function
+-  Exponential integral
+-  LambertW function.
+
 ## Installation
 
 ### 1. Clone the Repository
